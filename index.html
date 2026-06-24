@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moon Work Transformation Mapper</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --peri: #8183A6;
+  --peri-lt: #A8AAC8;
+  --peri-dk: #63657F;
+  --mist: #E9EEF2;
+  --mist-dk: #D8DEE5;
+  --blush: #D9B6A3;
+  --blush-lt: #EBD5C8;
+  --terra: #D97762;
+  --terra-lt: #E8967F;
+  --terra-dk: #C05E49;
+  --sage: #90AA9F;
+  --sage-lt: #B3CCC3;
+  --gold: #D4C08A;
+  --ink: #2A2630;
+  --ink-dim: #5C5768;
+  --ink-faint: #8D889A;
+  --bg: #FAF8F5;
+  --bg2: #F3F0EB;
+  --bg3: #EBE7E0;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Montserrat', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--sans);
+  background: linear-gradient(180deg, #FAF8F5 0%, #F3F0EB 40%, #E9EEF2 100%);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1140px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+.header { text-align: center; margin-bottom: 2rem; }
+.header-label { font-family: var(--sans); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.75rem; }
+.header-title { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 600; color: var(--ink); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 0.75rem; }
+.header-sub { font-family: var(--sans); font-size: 0.9rem; color: var(--ink-dim); line-height: 1.7; max-width: 640px; margin: 0 auto; }
+
+.tabs { display: flex; justify-content: center; gap: 8px; margin: 2rem 0 0; }
+.tab { font-family: var(--sans); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.03em; color: var(--ink-dim); background: transparent; border: 1.5px solid rgba(129,131,166,0.25); border-radius: 28px; padding: 0.7rem 1.8rem; cursor: pointer; transition: all 0.3s ease; }
+.tab:hover { border-color: var(--peri); color: var(--peri-dk); }
+.tab.active { background: var(--terra); color: #FFFAF7; border-color: var(--terra); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeIn 0.35s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.divider { height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(129,131,166,0.2) 20%, rgba(217,182,163,0.2) 50%, rgba(144,170,159,0.2) 80%, transparent 100%); margin: 1.75rem 0; }
+
+/* ---- ANGLE GRID ---- */
+.step-label { font-family: var(--sans); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); margin: 1.5rem 0 0.5rem; }
+.step-heading { font-family: var(--serif); font-size: 1.4rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; }
+.step-hint { font-family: var(--sans); font-size: 0.82rem; color: var(--ink-dim); line-height: 1.6; margin-bottom: 1rem; }
+
+.angle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.angle-card {
+  background: rgba(255,253,250,0.75);
+  backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(129,131,166,0.18);
+  border-radius: 14px;
+  padding: 1.15rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.angle-card:hover { border-color: var(--peri-lt); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(129,131,166,0.08); }
+.angle-card.active { border-color: var(--terra); border-width: 2px; box-shadow: 0 4px 16px rgba(217,119,98,0.12); }
+
+.angle-title { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; line-height: 1.2; }
+.angle-desc { font-family: var(--sans); font-size: 0.8rem; color: var(--ink-dim); line-height: 1.55; }
+
+/* ---- FORM AREA ---- */
+.form-area { display: none; animation: fadeIn 0.4s ease; }
+.form-area.visible { display: block; }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+@media (min-width: 960px) { .grid { grid-template-columns: 1.05fr .95fr; align-items: start; } }
+
+.card { background: rgba(255,253,250,0.8); backdrop-filter: blur(16px); border: 1px solid rgba(129,131,166,0.15); border-radius: 16px; padding: 1.75rem; }
+.card-heading { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; }
+.card-hint { font-family: var(--sans); font-size: 0.82rem; color: var(--ink-dim); line-height: 1.6; margin-bottom: 1.25rem; }
+
+.field-group { margin-bottom: 1.15rem; }
+.field-label { font-family: var(--sans); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px; display: block; }
+.field-sub { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-faint); line-height: 1.5; margin-bottom: 8px; display: block; }
+
+.field-input, .field-textarea, .field-select {
+  font-family: var(--sans); font-size: 0.85rem; color: var(--ink);
+  background: rgba(255,253,250,0.9); border: 1.5px solid rgba(129,131,166,0.2);
+  border-radius: 10px; padding: 0.8rem 1rem; width: 100%; outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.field-input::placeholder, .field-textarea::placeholder { color: var(--ink-faint); }
+.field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--peri); box-shadow: 0 0 0 3px rgba(129,131,166,0.1); }
+.field-textarea { resize: vertical; min-height: 68px; line-height: 1.6; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+.selected-angle-label {
+  font-family: var(--sans); font-size: 0.75rem; font-weight: 600;
+  color: var(--terra-dk); background: rgba(217,119,98,0.08);
+  border: 1px solid rgba(217,119,98,0.2); border-radius: 8px;
+  padding: 0.6rem 0.9rem; margin-bottom: 1.25rem; line-height: 1.5;
+}
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1.25rem; }
+.btn-primary { font-family: var(--sans); font-size: 0.85rem; font-weight: 600; color: #FFFAF7; background: var(--terra); border: none; border-radius: 28px; padding: 0.8rem 2rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 14px rgba(217,119,98,0.18); }
+.btn-primary:hover { background: var(--terra-lt); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(217,119,98,0.25); }
+.btn-secondary { font-family: var(--sans); font-size: 0.82rem; font-weight: 500; color: var(--ink-dim); background: transparent; border: 1.5px solid rgba(129,131,166,0.25); border-radius: 28px; padding: 0.7rem 1.4rem; cursor: pointer; transition: all 0.3s ease; }
+.btn-secondary:hover { border-color: var(--peri); color: var(--peri-dk); }
+
+/* ---- OUTPUT ---- */
+.output-block { background: rgba(233,238,242,0.25); border: 1px solid rgba(129,131,166,0.12); border-radius: 12px; padding: 1.15rem; margin-bottom: 12px; }
+.output-label { font-family: var(--sans); font-size: 0.62rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--peri-dk); margin-bottom: 6px; }
+.output-text { font-family: var(--sans); font-size: 0.85rem; color: var(--ink); line-height: 1.75; white-space: pre-wrap; }
+.copy-btn { font-family: var(--sans); font-size: 0.75rem; font-weight: 500; color: var(--peri-dk); background: transparent; border: 1px solid rgba(129,131,166,0.25); border-radius: 20px; padding: 0.45rem 1rem; cursor: pointer; margin-top: 8px; transition: all 0.25s ease; }
+.copy-btn:hover { border-color: var(--peri); background: rgba(129,131,166,0.06); }
+
+details { margin-top: 12px; border: 1px solid rgba(129,131,166,0.12); border-radius: 12px; background: rgba(255,253,250,0.5); padding: 12px 14px; }
+summary { cursor: pointer; font-family: var(--sans); font-weight: 600; font-size: 0.82rem; color: var(--peri-dk); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pill { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-dim); border: 1px solid rgba(129,131,166,0.18); border-radius: 20px; padding: 5px 10px; background: rgba(255,253,250,0.6); }
+.pill strong { color: var(--peri-dk); }
+
+.mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+.mini { background: rgba(255,253,250,0.6); border: 1px solid rgba(129,131,166,0.12); border-radius: 12px; padding: 12px 14px; font-family: var(--sans); font-size: 0.82rem; color: var(--ink-dim); line-height: 1.55; }
+.mini strong { color: var(--ink); display: block; margin-bottom: 4px; }
+
+/* ---- TEACHING ---- */
+.lesson-card { background: rgba(255,253,250,0.8); backdrop-filter: blur(16px); border: 1px solid rgba(129,131,166,0.15); border-radius: 16px; padding: 2rem; margin-top: 1.5rem; }
+.lesson-heading { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); line-height: 1.15; margin-bottom: 0.75rem; }
+.lesson-body { font-family: var(--sans); font-size: 0.88rem; color: var(--ink-dim); line-height: 1.75; }
+.lesson-body p { margin-bottom: 0.9rem; }
+.lesson-body p:last-child { margin-bottom: 0; }
+.lesson-body strong { color: var(--ink); font-weight: 600; }
+.pullquote { border-left: 3px solid var(--terra); padding: 2px 0 2px 18px; margin: 1.25rem 0 0.5rem; font-family: var(--serif); font-size: 1.4rem; font-style: italic; line-height: 1.25; color: var(--terra-dk); max-width: 600px; }
+
+.prompt-card { border: 1px solid rgba(129,131,166,0.15); background: rgba(233,238,242,0.25); border-radius: 12px; padding: 12px 16px; margin-top: 10px; font-family: var(--sans); font-size: 0.88rem; color: var(--ink); line-height: 1.6; }
+.prompt-label { font-family: var(--sans); font-size: 0.62rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--peri-dk); margin-bottom: 4px; display: block; }
+
+.footer { text-align: center; margin-top: 2.5rem; }
+.footer-line { font-family: var(--sans); font-size: 0.7rem; color: var(--ink-faint); letter-spacing: 0.06em; }
+
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--terra); color: #FFFAF7; font-family: var(--sans); font-weight: 600; font-size: 0.82rem; padding: 0.6rem 1.4rem; border-radius: 28px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; box-shadow: 0 6px 20px rgba(217,119,98,0.25); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* ---- MOON & STARS ---- */
+.moon-scene {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.wrap { position: relative; z-index: 1; }
+
+.moon {
+  position: absolute;
+  top: 40px;
+  right: 8%;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 40%, #d8c6e8 0%, #b8a0d4 30%, #9680be 60%, #7c6aaa 100%);
+  box-shadow:
+    0 0 40px rgba(184,160,212,0.35),
+    0 0 80px rgba(184,160,212,0.15),
+    0 0 120px rgba(184,160,212,0.08);
+  opacity: 0.7;
+}
+
+.moon::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 18px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(250,248,245,0.12) 0%, transparent 70%);
+}
+
+.moon::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(250,248,245,0.06);
+  box-shadow:
+    -30px -8px 0 4px rgba(250,248,245,0.04),
+    -12px 20px 0 2px rgba(250,248,245,0.05);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fall {
+  0% { transform: translateY(-10px) translateX(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(80px) rotate(180deg); opacity: 0; }
+}
+
+.star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: white;
+}
+
+.star.twinkle {
+  animation: twinkle var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+  box-shadow: 0 0 4px rgba(205,185,216,0.6);
+}
+
+.star.falling {
+  width: 2px;
+  height: 2px;
+  background: linear-gradient(135deg, white, var(--peri-lt));
+  animation: fall var(--dur) linear infinite;
+  animation-delay: var(--delay);
+  box-shadow: 0 0 6px rgba(168,170,200,0.5), -4px -2px 8px rgba(205,185,216,0.3);
+}
+
+.star.falling::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(205,185,216,0.4), transparent);
+  transform: rotate(-45deg);
+  transform-origin: 0 0;
+}
+
+@media (max-width: 600px) {
+  .wrap { padding: 1.5rem 1rem 3rem; }
+  .card, .lesson-card { padding: 1.25rem; }
+  .moon { width: 60px; height: 60px; top: 20px; right: 5%; opacity: 0.5; }
+}
+</style>
+</head>
+<body>
+<div class="moon-scene" id="moonScene">
+  <div class="moon"></div>
+</div>
+<div class="wrap">
+
+  <div class="header">
+    <p class="header-label">Moon Work Transformation Mapper</p>
+    <h1 class="header-title">Broad magic still needs a clear doorway.</h1>
+    <p class="header-sub">Moon work can change thirteen different parts of someone's life in a single year. That range is the gift. It is also why it is so hard to describe. Pick your transformation angle, customize it, and walk away with language that actually sells.</p>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="mapper">The Mapper</button>
+    <button class="tab" data-tab="teaching">The Teaching</button>
+  </nav>
+
+  <!-- ===================== MAPPER TAB ===================== -->
+  <div class="tab-panel active" id="tab-mapper">
+
+    <p class="step-label">Step 1</p>
+    <h2 class="step-heading">Pick your transformation angle</h2>
+    <p class="step-hint">These are seven ways to describe what moon work does. Pick the one that sounds most like your work. It becomes the seed of your macro promise.</p>
+
+    <div class="angle-grid" id="angleGrid"></div>
+
+    <div class="form-area" id="formArea">
+      <div class="grid">
+        <section class="card">
+          <p class="step-label">Step 2</p>
+          <h2 class="card-heading">Customize your macro promise</h2>
+          <p class="card-hint">Make the angle yours. The more specific you are about who she is and what shifts, the harder your language lands.</p>
+
+          <div class="selected-angle-label" id="selectedAngleLabel"></div>
+
+          <div class="field-group">
+            <label class="field-label" for="methodName">Method or framework name</label>
+            <input class="field-input" id="methodName" value="Your Moon Work Method" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="client">Who is this for?</label>
+            <span class="field-sub">Name one real woman so clearly she sees herself. The narrower you go, the more people feel called.</span>
+            <textarea class="field-textarea" id="client"></textarea>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="macroResult">After a full cycle, what does she trust herself to do?</label>
+            <textarea class="field-textarea" id="macroResult"></textarea>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="macroOutput">What does she leave with?</label>
+            <textarea class="field-textarea" id="macroOutput"></textarea>
+          </div>
+
+          <div class="divider"></div>
+
+          <p class="step-label">Step 3</p>
+          <h2 class="card-heading">Map a micro promise</h2>
+          <p class="card-hint">The specific shift for one workshop, circle, or seasonal offer. This part changes every cycle.</p>
+
+          <div class="two-col">
+            <div class="field-group">
+              <label class="field-label" for="phase">Moon phase</label>
+              <select class="field-select" id="phase">
+                <option value="New Moon">New Moon</option>
+                <option value="Waxing Moon">Waxing Moon</option>
+                <option value="Full Moon">Full Moon</option>
+                <option value="Waning Moon">Waning Moon</option>
+                <option value="Dark Moon">Dark Moon</option>
+                <option value="Seasonal Workshop">Seasonal Workshop</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="sign">Sign / season</label>
+              <select class="field-select" id="sign">
+                <option>Aries</option><option>Taurus</option><option>Gemini</option>
+                <option>Cancer</option><option>Leo</option><option>Virgo</option>
+                <option>Libra</option><option>Scorpio</option><option>Sagittarius</option>
+                <option>Capricorn</option><option>Aquarius</option><option>Pisces</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="lifeArea">Life area this offer emphasizes</label>
+            <input class="field-input" id="lifeArea" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="microShift">What specific shift happens in this offer?</label>
+            <textarea class="field-textarea" id="microShift"></textarea>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="deliverable">What does she leave with from this specific offer?</label>
+            <textarea class="field-textarea" id="deliverable"></textarea>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-primary" onclick="generate()">Generate Language</button>
+            <button class="btn-secondary" onclick="pickNewAngle()">Pick a Different Angle</button>
+            <button class="btn-secondary" onclick="copyAll()">Copy All Output</button>
+          </div>
+        </section>
+
+        <aside class="card">
+          <h2 class="card-heading">Your transformation language</h2>
+          <p class="card-hint">First-draft copy for sales pages, workshop descriptions, posts, and offers. Make it yours before it goes out.</p>
+          <div id="output">
+            <div class="output-block">
+              <div class="output-label">Ready when you are</div>
+              <div class="output-text">Fill in the fields and click "Generate Language."</div>
+            </div>
+          </div>
+
+          <details>
+            <summary>Moon phase prompts</summary>
+            <div class="mini-grid">
+              <div class="mini"><strong>New Moon</strong>What focus is ready to be chosen?</div>
+              <div class="mini"><strong>Waxing Moon</strong>What action will build momentum?</div>
+              <div class="mini"><strong>Full Moon</strong>What truth is ready to be witnessed?</div>
+              <div class="mini"><strong>Waning Moon</strong>What pattern is ready to be released?</div>
+              <div class="mini"><strong>Dark Moon</strong>What needs rest, closure, or quiet integration?</div>
+            </div>
+          </details>
+
+          <details>
+            <summary>Sign doorway cheat sheet</summary>
+            <div class="pill-row" id="signPills"></div>
+          </details>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TEACHING TAB ===================== -->
+  <div class="tab-panel" id="tab-teaching">
+
+    <div class="lesson-card">
+      <h3 class="lesson-heading">Why moon work is so hard to describe</h3>
+      <div class="lesson-body">
+        <p>Here is the thing nobody warns you about. Moon work changes so much that it becomes hard to say what you do.</p>
+        <p>A year of moons is thirteen doorways. Thirteen different rooms in a person's life. One cycle you are working in money and power and the things they are afraid to look at. The next you are in home, belonging, the ache to feel safe. The wheel keeps turning and you keep meeting people exactly where the sky has them standing.</p>
+        <p>That range is the whole gift. It is also the trap. When someone asks what you do and the honest answer is "I help you transform across every part of your life on the timeline the sky is already running," it lands as a blur. A blur does not sell.</p>
+        <div class="pullquote">Broad magic still needs a clear doorway.</div>
+      </div>
+    </div>
+
+    <div class="lesson-card">
+      <h3 class="lesson-heading">The macro and the micro</h3>
+      <div class="lesson-body">
+        <p>The fix is not to shrink your work. It is to name it on two levels at once.</p>
+        <p>The <strong>macro</strong> is the promise that never changes. It is the one transformation your work always creates, no matter what sign the moon is in. You pick it from a territory that fits you, and it becomes the thing you can say clearly every single time someone asks what you do.</p>
+        <p>The <strong>micro</strong> is the doorway. The specific shift of one workshop, one phase, one sign, one season. It changes every cycle, and it is supposed to.</p>
+        <p>When you hold both, you can say: here is what my work always does for you, and here is the specific door this season opens into it.</p>
+        <div class="pullquote">The moon is the map, not the promise.</div>
+      </div>
+      <div class="mini-grid" style="margin-top:1.25rem;">
+        <div class="mini"><strong>Macro promise</strong>The one result that holds across every moon. Example: she stops treating every idea as urgent and learns to match her action to the season she is actually in.</div>
+        <div class="mini"><strong>Micro promise</strong>The specific result of one workshop or season. Example: this Cancer season, she rebuilds her sense of home inside herself so she can stop performing safety and start living from it.</div>
+      </div>
+    </div>
+
+    <div class="lesson-card">
+      <h3 class="lesson-heading">One modality, twelve doorways</h3>
+      <div class="lesson-body">
+        <p>The lens is always moon work. The doorway changes with the season. Notice that none of these name the modality. They name what shifts in the person.</p>
+      </div>
+      <div class="mini-grid" style="margin-top:1rem;">
+        <div class="mini"><strong>Aries</strong>Reconnect with your courage and desire, and start the thing before you feel ready.</div>
+        <div class="mini"><strong>Taurus</strong>Come back to your body, your worth, and what actually feels like enough.</div>
+        <div class="mini"><strong>Gemini</strong>Get clear on what is yours to say and which choice is actually yours to make.</div>
+        <div class="mini"><strong>Cancer</strong>Rebuild a sense of inner safety so your choices come from care and belonging.</div>
+        <div class="mini"><strong>Leo</strong>Step back into being seen, and let your expression take up room again.</div>
+        <div class="mini"><strong>Virgo</strong>Refine the daily rhythm so your care for the details serves you instead of draining you.</div>
+        <div class="mini"><strong>Libra</strong>Rebalance the dynamics shaping your relationships and your capacity for harmony.</div>
+        <div class="mini"><strong>Scorpio</strong>Face what you have been avoiding and reclaim the power buried inside it.</div>
+        <div class="mini"><strong>Sagittarius</strong>Reconnect with the bigger meaning and the truth you have been quieting.</div>
+        <div class="mini"><strong>Capricorn</strong>Build real structure around the work or vision asking for your commitment.</div>
+        <div class="mini"><strong>Aquarius</strong>Reconnect with the future self and the community you are building toward.</div>
+        <div class="mini"><strong>Pisces</strong>Let yourself rest, surrender, and close the cycle with compassion.</div>
+      </div>
+    </div>
+
+    <div class="lesson-card">
+      <h3 class="lesson-heading">The "I help everyone" trap</h3>
+      <div class="lesson-body">
+        <p>Here is the move almost every practitioner makes, and it feels smart at the time. You think: I can help anyone, so I will make my words wide enough to hold everyone, and then more people will come work with me.</p>
+        <p>What happens is the opposite. When your language is built for everyone, no one sees themselves in it. "I help women find clarity and alignment" is true for ten million people and lands for none of them. The wider you reach, the more invisible you become.</p>
+        <p>So keep your big heart. Help everyone you are here to help. And still, point your words at one woman so precisely that she stops scrolling, because it feels like you reached into her life and named the thing she has never heard anyone say out loud. Name her, and the others who recognize themselves in her will follow.</p>
+        <div class="pullquote">When your words are built for everyone, no one sees themselves in them.</div>
+      </div>
+    </div>
+
+    <div class="lesson-card">
+      <h3 class="lesson-heading">Find your own language</h3>
+      <div class="lesson-body">
+        <p>When everything still feels generic, it is usually because the real answer has not surfaced yet. Sit with these, then take what comes into the Mapper tab.</p>
+      </div>
+      <div class="prompt-card"><span class="prompt-label">Prompt 01</span>Picture one real person you have helped. Not a type, a person. What was she living through the week she found you?</div>
+      <div class="prompt-card"><span class="prompt-label">Prompt 02</span>After a full cycle of your work, what does she trust herself to do that she could not before?</div>
+      <div class="prompt-card"><span class="prompt-label">Prompt 03</span>What do people keep coming back to you for, even when they came in for something else?</div>
+      <div class="prompt-card"><span class="prompt-label">Prompt 04</span>If you could name only one shift your work creates, the one underneath all the others, what is it?</div>
+      <div class="prompt-card"><span class="prompt-label">Prompt 05</span>What does this season make easier to name, choose, release, or build?</div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="divider"></div>
+    <p class="footer-line">Built for moon workers who change everything and want to say it in one clear line. Sacred Vision Society.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<script>
+const angles = [
+  {
+    id: 'focus',
+    title: 'Choosing what deserves her energy',
+    desc: 'She is scattered across too many priorities and cannot tell which one this season is actually about.',
+    tension: 'She is scattered across too many priorities and cannot tell which one this season is actually about.',
+    salesHook: 'You have been spreading yourself across too many priorities, and you cannot tell which one this season is actually about.',
+    defaults: {
+      client: 'intuitive women who have too many ideas and treat every single one as this month\'s priority',
+      macroResult: 'choose the one thing this season is actually about and let the rest wait without guilt',
+      macroOutput: 'a seasonal focus, a clear sense of what can wait, and one action step she trusts',
+      microShift: 'reconnect with what she actually needs this cycle so she can stop tending everyone else\'s priorities and choose her own',
+      deliverable: 'one named priority for this cycle and one thing she is officially giving herself permission to release'
+    }
+  },
+  {
+    id: 'patterns',
+    title: 'Reading her emotional patterns',
+    desc: 'The same feelings come back every cycle and she does not know why or what to do with them.',
+    tension: 'The same emotional patterns come back every cycle, and she does not know why or what to do with them.',
+    salesHook: 'The same wave of emotion keeps coming back every month, and you are not sure why or what to do with it.',
+    defaults: {
+      client: 'women who feel the same wave of emotion come back every month and do not understand why it keeps returning',
+      macroResult: 'recognize what each emotional cycle is trying to show her so she can respond with care instead of fear',
+      macroOutput: 'a name for the pattern she has been repeating, an understanding of what triggers it, and a new way to move through it',
+      microShift: 'name the emotional pattern this season is surfacing so she can meet it with tenderness instead of resistance',
+      deliverable: 'one named emotional pattern, one trigger she can finally see, and a self-care practice built for this cycle'
+    }
+  },
+  {
+    id: 'timing',
+    title: 'Right-timed action',
+    desc: 'She treats every idea as urgent and has no rhythm for knowing when to move and when to wait.',
+    tension: 'She treats every idea as urgent and has no rhythm for knowing when to move and when to wait.',
+    salesHook: 'You have been treating every idea as urgent, and it is costing you. Nothing gets your full attention because everything gets some of it.',
+    defaults: {
+      client: 'driven, multi-passionate women who have ten projects running and no way to know which one to pour into right now',
+      macroResult: 'match her action to the season she is actually in, instead of forcing every season to be a building season',
+      macroOutput: 'a rhythm for knowing when to push, when to rest, and when to let something be finished',
+      microShift: 'slow down enough to feel what this season is asking for, instead of pushing through it with her to-do list',
+      deliverable: 'one right-timed action for this cycle and one thing she is giving herself permission to pause'
+    }
+  },
+  {
+    id: 'safety',
+    title: 'Inner safety',
+    desc: 'Life is asking her to choose, change, or be seen, and she does not feel steady enough to do it.',
+    tension: 'Life is asking her to choose, change, or be seen, and she does not feel steady enough to do it.',
+    salesHook: 'Something in your life is asking you to choose, change, or be seen, and you do not feel steady enough to do it yet.',
+    defaults: {
+      client: 'women in transition who know they need to make a big decision but do not feel steady enough to choose',
+      macroResult: 'make real choices from a place of inner safety, even when the outcome is not guaranteed',
+      macroOutput: 'a felt sense of steadiness in her own body, a named fear she can finally see, and one decision she is ready to make',
+      microShift: 'rebuild her sense of emotional safety so the choices ahead feel less like threats and more like doors',
+      deliverable: 'one fear she can name, one source of safety she can return to, and one choice she is ready to move on'
+    }
+  },
+  {
+    id: 'bridge',
+    title: 'Bridging practice and daily life',
+    desc: 'She has a deep practice but it stays in the journal. It has not changed how she actually lives or decides.',
+    tension: 'She has a real spiritual practice, but it stays in the journal. It has not changed how she actually lives or decides.',
+    salesHook: 'You have a real practice. You pull cards, journal, sit in ceremony. And it still has not changed how you actually live or decide.',
+    defaults: {
+      client: 'spiritual women who journal, pull cards, and sit in ceremony but still make the same decisions they made before they started',
+      macroResult: 'turn what she receives in reflection into actual changes in how she lives, decides, and shows up',
+      macroOutput: 'a bridge between her inner work and her outer life, so her practice becomes how she lives instead of something she does on the side',
+      microShift: 'take what this season is teaching her and put it into practice in one real relationship or decision',
+      deliverable: 'one insight from her practice, one real-life situation it applies to, and one way she will act on it this cycle'
+    }
+  },
+  {
+    id: 'signal',
+    title: 'Sorting through the noise',
+    desc: 'Too many options, too many feelings, too many voices. She cannot find her own signal in it.',
+    tension: 'Too many options, too many feelings, too many voices. She cannot find her own signal in the noise.',
+    salesHook: 'You have too many options, too many feelings, too many voices weighing in. You cannot find your own signal in the noise.',
+    defaults: {
+      client: 'empathic, intuitive women who absorb so much input from the world that they cannot hear their own knowing underneath it',
+      macroResult: 'separate her own signal from everyone else\'s noise, and trust what she finds there',
+      macroOutput: 'a quieter relationship with outside input, a clearer sense of her own voice, and a decision she made from it',
+      microShift: 'use this season\'s inward pull to separate her needs from the needs she has been absorbing from everyone around her',
+      deliverable: 'one boundary she is ready to hold, one need that is actually hers, and one voice she is turning down'
+    }
+  },
+  {
+    id: 'reset',
+    title: 'A clean monthly reset',
+    desc: 'She carries last month\'s emotional weight into this month and never gets a fresh start.',
+    tension: 'She carries last month\'s emotional weight into this month and never gets a fresh start.',
+    salesHook: 'You keep carrying last month\'s emotional weight into this month. You never get a clean start.',
+    defaults: {
+      client: 'women who start every month already carrying the emotional weight of the last one and never get a fresh beginning',
+      macroResult: 'close each cycle on purpose so she enters the next one lighter, clearer, and ready to begin again',
+      macroOutput: 'a monthly rhythm for releasing what is done, naming what matters now, and starting the next cycle clean',
+      microShift: 'close out the emotional debts she has been carrying and create a genuinely fresh starting place for what is next',
+      deliverable: 'one thing she is officially done carrying, one thing she is beginning, and a closing ritual for this cycle'
+    }
+  },
+  {
+    id: 'trust',
+    title: 'Trusting her own knowing',
+    desc: 'She hears her intuition clearly. She just overrides it every time with logic, fear, or other people\'s opinions.',
+    tension: 'She hears her own knowing clearly, and then she overrides it every single time with logic, fear, or someone else\'s opinion.',
+    salesHook: 'You get the hit. You know what is true. And then you talk yourself out of it, every time. You override your own knowing with logic, fear, or someone else\'s opinion.',
+    defaults: {
+      client: 'intuitive women who receive real guidance but override it every time because they do not trust themselves to follow what they already know',
+      macroResult: 'follow her own knowing the first time, without needing permission, proof, or someone else to confirm what she already feels',
+      macroOutput: 'a track record of listening to herself, a practice for catching the override in real time, and the lived experience of what happens when she follows through',
+      microShift: 'notice the specific way she overrides her knowing this season, name it, and practice following through on one thing she already knows is true',
+      deliverable: 'one pattern of self-override she can see now, one intuitive knowing she is choosing to follow, and a practice for catching herself next time'
+    }
+  },
+  {
+    id: 'desire',
+    title: 'Reclaiming what she actually wants',
+    desc: 'She has been serving, mothering, and holding space so long she lost the thread of her own desire.',
+    tension: 'She has been so deep in service, mothering, and holding space for everyone else that she genuinely lost the thread of her own desire.',
+    salesHook: 'You have been serving, mothering, holding space, and building for everyone else for so long that you do not know what you actually want anymore. The question itself feels selfish.',
+    defaults: {
+      client: 'women who have given so much to everyone else\'s needs that they have lost contact with their own wanting and feel guilty for even asking the question',
+      macroResult: 'reconnect with what she actually wants, season by season, without guilt, and let her own desire take up real space in her life',
+      macroOutput: 'a living relationship with her own desire, a named want she is no longer apologizing for, and permission she gave herself',
+      microShift: 'use this season to reconnect with one desire she buried under obligation, name it out loud, and take one step toward it',
+      deliverable: 'one desire she is reclaiming, one obligation she is renegotiating, and one step toward something that is just for her'
+    }
+  }
+];
+
+const signData = {
+  Aries: "courage, initiation, desire, self-trust, momentum",
+  Taurus: "safety, stability, body, resources, pleasure, worth",
+  Gemini: "voice, choice, curiosity, communication, mental clarity",
+  Cancer: "home, belonging, emotional safety, care, family patterns",
+  Leo: "visibility, expression, joy, creative confidence, being seen",
+  Virgo: "refinement, routines, service, discernment, practical support",
+  Libra: "relationship dynamics, harmony, reciprocity, choices, collaboration",
+  Scorpio: "depth, power, intimacy, release, shadow patterns, transformation",
+  Sagittarius: "truth, vision, belief, expansion, adventure, meaning",
+  Capricorn: "structure, commitment, career, responsibility, legacy, long-term vision",
+  Aquarius: "future self, community, innovation, belonging, liberation",
+  Pisces: "intuition, surrender, rest, closure, spiritual trust, compassion"
+};
+
+const signLifeAreas = {
+  Aries: "courage, desire, and self-trust",
+  Taurus: "worth, stability, and what feels like enough",
+  Gemini: "voice, communication, and mental clarity",
+  Cancer: "emotional safety, home, and belonging",
+  Leo: "visibility, expression, and creative confidence",
+  Virgo: "daily rhythm, refinement, and practical support",
+  Libra: "relationships, harmony, and reciprocity",
+  Scorpio: "depth, power, and transformation",
+  Sagittarius: "truth, vision, and meaning",
+  Capricorn: "structure, career, and long-term commitment",
+  Aquarius: "community, future self, and liberation",
+  Pisces: "rest, intuition, and spiritual trust"
+};
+
+const phaseActions = {
+  "New Moon": "set a clear focus and choose the seed of the cycle",
+  "Waxing Moon": "build momentum through one aligned action",
+  "Full Moon": "witness what is true and name what has fully surfaced",
+  "Waning Moon": "release what is draining your energy",
+  "Dark Moon": "integrate, rest, and close the loop before the next cycle begins",
+  "Seasonal Workshop": "work with the season as a focused transformation doorway"
+};
+
+let selectedAngle = null;
+let lifeAreaUserEdited = false;
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function lc(t) { return t ? t.charAt(0).toLowerCase() + t.slice(1) : ""; }
+
+function buildAngleGrid() {
+  const grid = document.getElementById('angleGrid');
+  angles.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'angle-card';
+    card.dataset.id = a.id;
+    card.innerHTML = `<div class="angle-title">${a.title}</div><div class="angle-desc">${a.desc}</div>`;
+    card.onclick = () => selectAngle(a.id);
+    grid.appendChild(card);
+  });
+}
+
+function selectAngle(id) {
+  selectedAngle = angles.find(a => a.id === id);
+  document.querySelectorAll('.angle-card').forEach(c => c.classList.toggle('active', c.dataset.id === id));
+
+  document.getElementById('selectedAngleLabel').textContent = 'Your angle: ' + selectedAngle.title;
+  document.getElementById('client').value = selectedAngle.defaults.client;
+  document.getElementById('macroResult').value = selectedAngle.defaults.macroResult;
+  document.getElementById('macroOutput').value = selectedAngle.defaults.macroOutput;
+  document.getElementById('microShift').value = selectedAngle.defaults.microShift;
+  document.getElementById('deliverable').value = selectedAngle.defaults.deliverable;
+
+  lifeAreaUserEdited = false;
+  updateLifeArea();
+
+  document.getElementById('formArea').classList.add('visible');
+  document.getElementById('formArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  generate();
+}
+
+function updateLifeArea() {
+  if (lifeAreaUserEdited) return;
+  const sign = val('sign') || 'Cancer';
+  document.getElementById('lifeArea').value = signLifeAreas[sign] || '';
+}
+
+function pickNewAngle() {
+  selectedAngle = null;
+  document.querySelectorAll('.angle-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('formArea').classList.remove('visible');
+  document.querySelector('.angle-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function generate() {
+  if (!selectedAngle) return;
+
+  const method = val('methodName') || 'your lunar method';
+  const client = val('client') || 'your clients';
+  const macroResult = val('macroResult') || 'trust themselves to move through life with the seasons';
+  const macroOutput = val('macroOutput') || 'a rhythm, a name for the season, and a next step';
+  const phase = val('phase');
+  const sign = val('sign');
+  const lifeArea = val('lifeArea') || signData[sign];
+  const microShift = val('microShift') || 'make one clear shift in this season of life';
+  const deliverable = val('deliverable') || 'one clear focus and one grounded next step';
+  const signFocus = signData[sign];
+  const phaseAction = phaseActions[phase];
+
+  const macro = `${method} is for ${client}. ${selectedAngle.tension} Over a full cycle of this work, she learns to ${lc(macroResult)}. She leaves with ${lc(macroOutput)}.`;
+
+  const micro = `This ${phase} in ${sign} works with ${lifeArea}. It helps ${client} ${lc(microShift)}. By the end she leaves with ${lc(deliverable)}.`;
+
+  const sales = `${selectedAngle.salesHook} This ${phase} in ${sign} is a focused reset. We work with the ${sign} themes of ${signFocus} to help you ${phaseAction}. You leave with ${lc(deliverable)}, and your next step feels steadier and easier to trust.`;
+
+  const positioning = `I help ${client} use lunar insights so they can ${lc(macroResult)}. Each lunar season opens a different doorway. The result holds steady: she lives in time with her own life.`;
+
+  const output = document.getElementById('output');
+  output.innerHTML = '';
+  addResult('Macro Promise', macro);
+  addResult('Micro Offer Promise', micro);
+  addResult('Sales Blurb', sales);
+  addResult('Core Positioning Statement', positioning);
+}
+
+function addResult(title, text) {
+  const output = document.getElementById('output');
+  const box = document.createElement('div');
+  box.className = 'output-block';
+  box.innerHTML = `<div class="output-label">${esc(title)}</div><div class="output-text">${esc(text)}</div>`;
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'Copy';
+  btn.onclick = () => { navigator.clipboard.writeText(text).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy', 1500); showToast(); }); };
+  box.appendChild(btn);
+  output.appendChild(box);
+}
+
+function esc(s) { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
+
+function copyAll() {
+  const texts = [...document.querySelectorAll('.output-text')].map(el => el.textContent);
+  if (!texts.length) return;
+  navigator.clipboard.writeText(texts.join('\n\n')).then(showToast);
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+function populatePills() {
+  const h = document.getElementById('signPills');
+  h.innerHTML = '';
+  Object.entries(signData).forEach(([sign, words]) => {
+    const p = document.createElement('div');
+    p.className = 'pill';
+    p.innerHTML = `<strong>${sign}:</strong> ${words}`;
+    h.appendChild(p);
+  });
+}
+
+document.getElementById('sign').addEventListener('change', updateLifeArea);
+document.getElementById('lifeArea').addEventListener('input', () => { lifeAreaUserEdited = true; });
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+buildAngleGrid();
+populatePills();
+
+// Stars
+(function initStars() {
+  const scene = document.getElementById('moonScene');
+
+  // Twinkling stars
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('div');
+    s.className = 'star twinkle';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+    s.style.setProperty('--delay', (Math.random() * 5) + 's');
+    s.style.width = s.style.height = (1.5 + Math.random() * 2.5) + 'px';
+    scene.appendChild(s);
+  }
+
+  // Falling stars (occasional)
+  function spawnFalling() {
+    const s = document.createElement('div');
+    s.className = 'star falling';
+    s.style.left = Math.random() * 90 + '%';
+    s.style.top = '-10px';
+    s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
+    s.style.setProperty('--delay', '0s');
+    scene.appendChild(s);
+    setTimeout(() => s.remove(), 8000);
+  }
+
+  // Spawn a falling star every 3-7 seconds
+  function scheduleFalling() {
+    spawnFalling();
+    setTimeout(scheduleFalling, 3000 + Math.random() * 4000);
+  }
+  setTimeout(scheduleFalling, 1500);
+})();
+</script>
+</body>
+</html>
